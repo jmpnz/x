@@ -5,8 +5,8 @@ This is a monorepo of bookmarks, notes, experiments and things.
 In some cases I will link to other repos (since adopting this `x`
 repo style I didn't want to move things around).
 
- The idea for a monorepo for all small experiments, notes and such
-is from [Xe Iaso's own `x` monorepo](https://github.com/Xe/x).
+The idea for a monorepo for all small experiments, notes and such
+is inspired from [Xe Iaso's own `x` monorepo](https://github.com/Xe/x).
 
 ## Random code and notes
 
@@ -26,3 +26,4 @@ is from [Xe Iaso's own `x` monorepo](https://github.com/Xe/x).
 - [Instrumentation and Go](https://wat.io/posts/instrumentation-and-go/)
 - [Nilaway (Uber's nil deref finder)](https://wat.io/posts/instrumentation-and-go/)
 - [Eaton Phil's syscall fault injection with zig](https://notes.eatonphil.com/2023-10-01-intercepting-and-modifying-linux-system-calls-with-ptrace.html)
+- [Streetfighting computer science](https://nick-black.com/dankwiki/index.php/Book_list_for_streetfighting_computer_scientists)

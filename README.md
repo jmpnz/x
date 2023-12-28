@@ -25,3 +25,4 @@ is from [Xe Iaso's own `x` monorepo](https://github.com/Xe/x).
 - [Java GC distilled](https://mechanical-sympathy.blogspot.com/2013/07/java-garbage-collection-distilled.html)
 - [Instrumentation and Go](https://wat.io/posts/instrumentation-and-go/)
 - [Nilaway (Uber's nil deref finder)](https://wat.io/posts/instrumentation-and-go/)
+- [Eaton Phil's syscall fault injection with zig](https://notes.eatonphil.com/2023-10-01-intercepting-and-modifying-linux-system-calls-with-ptrace.html)

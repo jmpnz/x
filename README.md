@@ -16,6 +16,7 @@ is inspired from [Xe Iaso's own `x` monorepo](https://github.com/Xe/x).
 - [Snippets of assembly](https://github.com/jmpnz/snippets_of_asm)
 - [Graphs without pointers in Rust (reminder to self)](https://github.com/jmpnz/flat_graphs)
 - [Jit Junk](https://github.com/jmpnz/jit-explorations)
+- [Tricky Values: poor man's bit boxing for small static typed vm's](./trickyvalues)
 
 ## Random links
 

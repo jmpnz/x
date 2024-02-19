@@ -1,17 +1,60 @@
+use std::fmt::Display;
+
 fn main() {
-    // baseline::run();
-    // btreemap::run();
+    baseline::run();
+    btreemap::run();
     mapped_file::run();
 }
 
+#[derive(Debug, Clone, Copy)]
+struct Stats {
+    count: u64,
+    min: f64,
+    max: f64,
+    total: f64,
+}
+
+impl Default for Stats {
+    fn default() -> Self {
+        Self {
+            count: 0,
+            min: f64::MAX,
+            max: f64::MIN,
+            total: 0.0,
+        }
+    }
+}
+
+impl Display for Stats {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let avg = self.total / (self.count as f64);
+        write!(f, "{:.1}/{:.1}/{:.1}", self.min, avg, self.max)
+    }
+}
+
+impl Stats {
+    fn update(&mut self, val: f64) {
+        self.min = self.min.min(val);
+        self.max = self.max.max(val);
+        self.count += 1;
+        self.total += val;
+    }
+
+    fn merge(&mut self, other: &Self) {
+        self.min = self.min.min(other.min);
+        self.max = self.max.max(other.max);
+        self.count += other.count;
+        self.total += other.total;
+    }
+}
 /// Improving on the baseline implementation by using `mmap` and
 /// `HashMap` and map reduce on number of available cores.
 ///
 /// This only works on Unix/Linux, on Windows use `VirtualAlloc`.
 #[cfg(target_family = "unix")]
 mod mapped_file {
+    use crate::Stats;
     use std::collections::HashMap;
-    use std::fmt::Display;
     use std::io::BufRead;
     use std::{fs::File, os::fd::AsRawFd};
 
@@ -41,60 +84,17 @@ mod mapped_file {
         }
     }
 
-    #[derive(Debug, Clone, Copy)]
-    struct Stats {
-        count: u64,
-        min: f64,
-        max: f64,
-        total: f64,
-    }
-
-    impl Default for Stats {
-        fn default() -> Self {
-            Self {
-                count: 0,
-                min: f64::MAX,
-                max: f64::MIN,
-                total: 0.0,
-            }
-        }
-    }
-
-    impl Display for Stats {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            let avg = self.total / (self.count as f64);
-            write!(f, "{:.1}/{:.1}/{:.1}", self.min, avg, self.max)
-        }
-    }
-
-    impl Stats {
-        fn map(&mut self, val: f64) {
-            self.min = self.min.min(val);
-            self.max = self.max.max(val);
-            self.count += 1;
-            self.total += val;
-        }
-
-        fn reduce(&mut self, other: &Self) {
-            self.min = self.min.min(other.min);
-            self.max = self.max.max(other.max);
-            self.count += other.count;
-            self.total += other.total;
-        }
-    }
-
     /// Offsets of chunks in the mapped file.
     #[derive(Debug, Clone, Copy)]
     struct ChunkOffsets(usize, usize);
 
     /// Virtually chunk the memory mapped file by calculating chunk offsets
-    /// assuming `std::thread::available_parallelism()`..
+    /// assuming `std::thread::available_parallelism()`.
     fn chunkify(mapped_file: &[u8]) -> Vec<ChunkOffsets> {
         let num_cores: usize = std::thread::available_parallelism()
             .expect("failed to estimate number of cores")
             .into();
-        println!("Available cores {num_cores}");
-        let mut chunk_size = mapped_file.len() / num_cores;
+        let chunk_size = mapped_file.len() / num_cores;
         let mut chunk_offsets = vec![];
 
         let mut start = 0;
@@ -121,7 +121,7 @@ mod mapped_file {
         let chunks = chunkify(mapped_file);
         let mut threads = vec![];
 
-        for (i, chunk) in chunks.iter().enumerate() {
+        for chunk in chunks {
             let start = chunk.0;
             let end = chunk.1;
             threads.push(std::thread::spawn(move || -> HashMap<String, Stats> {
@@ -136,10 +136,10 @@ mod mapped_file {
                         let temp = line[1].parse::<f64>().unwrap();
 
                         if let Some(stats) = local_stats.get_mut(city) {
-                            stats.map(temp);
+                            stats.update(temp);
                         } else {
                             let mut stats = Stats::default();
-                            stats.map(temp);
+                            stats.update(temp);
                             // Copy is needed to store in a hash map.
                             local_stats.insert(city.to_string(), stats);
                         }
@@ -156,7 +156,7 @@ mod mapped_file {
             .map(|thread| thread.join().unwrap())
             .for_each(|local_stats| {
                 for (k, v) in local_stats {
-                    global_stats.entry(k).or_default().reduce(&v);
+                    global_stats.entry(k).or_default().merge(&v);
                 }
             });
 
@@ -167,48 +167,11 @@ mod mapped_file {
 }
 
 /// Swapping `HashMap` for `BTreeMap`, yields worst performance which is predictable.
-///
-// cargo run --release  145.48s user 2.48s system 97% cpu 2:31.15 tota
 mod btreemap {
+    use crate::Stats;
     use std::collections::BTreeMap;
-    use std::fmt::Display;
     use std::fs::File;
     use std::io::{BufRead, BufReader};
-
-    #[derive(Debug, Clone, Copy)]
-    struct Stats {
-        count: u64,
-        min: f64,
-        max: f64,
-        total: f64,
-    }
-
-    impl Default for Stats {
-        fn default() -> Self {
-            Self {
-                count: 0,
-                min: f64::MAX,
-                max: f64::MIN,
-                total: 0.0,
-            }
-        }
-    }
-
-    impl Display for Stats {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            let avg = self.total / (self.count as f64);
-            write!(f, "{:.1}/{:.1}/{:.1}", self.min, avg, self.max)
-        }
-    }
-
-    impl Stats {
-        fn update(&mut self, val: f64) {
-            self.min = self.min.min(val);
-            self.max = self.max.max(val);
-            self.count += 1;
-            self.total += val;
-        }
-    }
 
     pub fn run() {
         let f = File::open("measurements.txt").expect("Unable to open measurements file");
@@ -241,48 +204,11 @@ mod btreemap {
 
 /// Baseline implementation uses a naive approach reading line by line
 /// and using a `HashMap`.
-///
-/// cargo run --release  109.59s user 2.45s system 97% cpu 1:55.31 total
 mod baseline {
+    use crate::Stats;
     use std::collections::HashMap;
-    use std::fmt::Display;
     use std::fs::File;
     use std::io::{BufRead, BufReader};
-
-    #[derive(Debug, Clone, Copy)]
-    struct Stats {
-        count: u64,
-        min: f64,
-        max: f64,
-        total: f64,
-    }
-
-    impl Default for Stats {
-        fn default() -> Self {
-            Self {
-                count: 0,
-                min: f64::MAX,
-                max: f64::MIN,
-                total: 0.0,
-            }
-        }
-    }
-
-    impl Display for Stats {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            let avg = self.total / (self.count as f64);
-            write!(f, "{:.1}/{:.1}/{:.1}", self.min, avg, self.max)
-        }
-    }
-
-    impl Stats {
-        fn update(&mut self, val: f64) {
-            self.min = self.min.min(val);
-            self.max = self.max.max(val);
-            self.count += 1;
-            self.total += val;
-        }
-    }
 
     pub fn run() {
         let f = File::open("measurements.txt").expect("Unable to open measurements file");

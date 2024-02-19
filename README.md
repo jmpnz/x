@@ -17,6 +17,8 @@ is inspired from [Xe Iaso's own `x` monorepo](https://github.com/Xe/x).
 - [Graphs without pointers in Rust (reminder to self)](https://github.com/jmpnz/flat_graphs)
 - [Jit Junk](https://github.com/jmpnz/jit-explorations)
 - [Tricky Values: poor man's bit boxing for small static typed vm's](./trickyvalues)
+- [One Billion Rows Challenge in Rust](./obrc)
+- [When does hashmap lookup outperform binary search ?](./fastenough)
 
 ## Random links
 
